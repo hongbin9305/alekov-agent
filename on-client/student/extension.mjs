@@ -51,7 +51,11 @@ export function createStudentView() {
         root.append(element);
         return element;
       };
-      const labelFor = (labels, value) => Object.hasOwn(labels, value) ? labels[value] : labels.unknown;
+      const labelFor = (labels, value) => {
+        const code = typeof value === 'string' && value ? value : 'unknown';
+        const description = Object.hasOwn(labels, code) ? labels[code] : labels.unknown;
+        return `${description}(${code})`;
+      };
       const itemName = (item) => text(item?.label ?? item?.name, '이름 정보 없음');
 
       const identitySection = section('로그인한 사용자·기기·세션', me);
