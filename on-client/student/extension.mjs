@@ -519,6 +519,26 @@ export function createStudentView() {
       return root;
     },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
+    /*
+     * 17단계 정적 검수용 제공 소스 호출 경로(원본 코드 위치·구문; 실행/권한 성공 증거 아님).
+     * 이 주석은 제공 파일을 대체하지 않고, 읽기 제한이 있을 때 해당 원문 위치를 안내한다.
+     * public/app.js:953-959: onclick: (e) => requestExplain(event, e.currentTarget)
+     * public/app.js:996: aiRequest('/api/ai/explain', { body: { eventId: event.id }, signal: controller.signal })
+     * src/server.mjs:466: if(req.method==='POST'&&url.pathname==='/api/ai/explain'&&nativeHost){
+     * src/server.mjs:504: const raw=await bounded(()=>service.explainIncident(incident,options));
+     * src/server.mjs:527: if(req.method==='POST'&&url.pathname==='/api/ai/explain'){
+     * src/server.mjs:541: const output=await bounded(()=>mappedService().explainIncident(...));
+     * src/ai/service.mjs:268: (await import('../../vendor/clco-http.mjs')).createClcoClient
+     * src/ai/service.mjs:372: Reflect.apply(method.value,activeClient,[body,{signal}])
+     * src/ai/service.mjs:386: activeClient.chat({ model, stream: false, messages: [...] }, { signal })
+     * vendor/clco-http.mjs:119-122: async chat(body, options = {}) {
+     *   const result = await request('/chat/completions', body, options);
+     * vendor/clco-http.mjs:65: fetch(base.href.replace(/\/$/, '') + endpoint, { ... })
+     * public/app.js:1007-1016: validExplanation(result.data, event) 성공 후에만
+     *   state.selectedExplanation.resource = { status: 'ok', data: explanation, meta: result.meta };
+     * 연결 점검은 src/ai/service.mjs:296의 listModels로 별도 처리된다.
+     * 실제 ai.explain 권한 및 외부 모델 응답 성공 여부는 이 주석으로 증명할 수 없다.
+     */
     renderAiConnection({ status, mode, data, error, checkedAt, explanationAccepted = false } = {}) {
       const root = document.createElement('section');
       const make = (tag, value) => {
