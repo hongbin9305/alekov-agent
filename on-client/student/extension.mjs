@@ -387,7 +387,7 @@ export function createStudentView() {
       const errorNotice = (title, resource) => {
         const code = safeCode(resource?.error?.code);
         const message = safe(resource?.error?.message, '오류 내용이 없습니다.');
-        const timedOut = /TIMEOUT|TIMED_OUT|DEADLINE|시간\s*초과/i.test(code + ' ' + message);
+        const timedOut = /TIME[_-]?OUT|TIMED[_-]?OUT|ETIMEDOUT|DEADLINE|시간\s*(?:이\s*)?초과|timed\s*out/i.test(code + ' ' + message);
         return title + ' 정보를 불러오지 못했습니다. '
           + (timedOut ? '시간 초과: ' : '조회 실패: ')
           + message + ' · 오류 코드: ' + code + '. ' + retryAdvice;
@@ -464,14 +464,30 @@ export function createStudentView() {
           help.append(make('p', '도움정보 확인 불가(CONTRACT_MISMATCH): 진단 자료 형식이 올바르지 않습니다.'));
         } else {
           // 서버 원본 객체의 다른 필드는 절대로 복사하지 않는다.
+          // 필드 허용 목록 + 각 값의 형식·길이 검사. 비정상 값은 원문 대신 확인 불가로 표시한다.
+          // 비밀처럼 보이는 텍스트를 단순 정규식으로 가리는 것만으로 안전하다고 가정하지 않는다.
+          const diagnosticRules = {
+            requestId: /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/,
+            component: /^[A-Za-z][A-Za-z0-9._-]{0,63}$/,
+            version: /^v?[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}(?:[-+][A-Za-z0-9.-]{1,40})?$/,
+            checkedAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/,
+            engineMode: /^(?:connected|demo|disconnected|unknown)$/,
+            engineCode: /^[A-Z][A-Z0-9_]{0,79}$/,
+          };
+          const diagnosticValue = (field, value) => {
+            if (typeof value !== 'string' || !diagnosticRules[field].test(value)
+                || secretPattern.test(value)) return '확인 불가';
+            if (field === 'checkedAt' && !Number.isFinite(Date.parse(value))) return '확인 불가';
+            return value;
+          };
           const info = {
-            requestId: safe(diagnostics.data.requestId),
-            component: safe(diagnostics.data.component),
-            version: safe(diagnostics.data.version),
-            checkedAt: safe(diagnostics.data.checkedAt),
+            requestId: diagnosticValue('requestId', diagnostics.data.requestId),
+            component: diagnosticValue('component', diagnostics.data.component),
+            version: diagnosticValue('version', diagnostics.data.version),
+            checkedAt: diagnosticValue('checkedAt', diagnostics.data.checkedAt),
             engine: {
-              mode: safe(diagnostics.data.engine?.mode),
-              code: safeCode(diagnostics.data.engine?.code),
+              mode: diagnosticValue('engineMode', diagnostics.data.engine?.mode),
+              code: diagnosticValue('engineCode', diagnostics.data.engine?.code),
             },
           };
           const safeHelpText = [
