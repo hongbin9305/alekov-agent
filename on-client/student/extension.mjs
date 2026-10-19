@@ -653,7 +653,7 @@ export function createStudentView() {
         root.append(make('p', '보안 기록에서 사건을 먼저 선택하세요. AI 설명은 아직 실행되지 않았습니다.'));
         return root;
       }
-      root.append(make('p', '사건 ID: ' + event.id));
+      // 아직 설명 응답을 받지 못한 상태에는 사건 ID를 설명 성공 결과처럼 표시하지 않는다.
       if (explanation?.status === 'idle' || !explanation?.status) {
         root.append(make('p', '선택한 사건의 AI 설명은 아직 요청하지 않았습니다.'));
         return root;
