@@ -37,3 +37,11 @@ npm start도 같은 서버를 켭니다. 기본 실행은 실제 회사 시스�
 - **실행:** `on-client` PowerShell에서 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1`. 브라우저 주소 `http://127.0.0.1:5189/`, 종료 `Ctrl+C`. 서버 시작 메시지는 실제 AI 연결 성공이 아니다.
 - **자세한 설치·실행·종료·구성도(Mermaid/텍스트)·오류별 복구·확인/미확인 기록:** [학생 실행 설명서](docs/STUDENT_RUNBOOK.md).
 - 현재 공개 Git 커밋에는 `on-client/package-lock.json`이 없으며, 실제 PC에서 앱 실행·SDP/AI 연결·OSV 조회 성공을 확인했다고 주장하지 않는다. `npm run demo`는 예제 자료, 기본 실행은 `disconnected`다.
+
+
+## hongbin 최종 재현·인수인계 (22단계)
+
+- **버전:** `package.json`의 `0.2.11`. **릴리스 분류는 검증 중(release candidate)**이며, 실제 집행/운영 연결이 확인되지 않아 `v1.0` 또는 운영 인증으로 표시하지 않는다.
+- **최종 전달:** [22단계 재현·검증 및 릴리스 기록](docs/STUDENT_FINAL_HANDOFF_22.md)에서 저장소·브랜치·기준 커밋·최종 커밋 확인법, 새 폴더 복제/검증/시작/종료/재실행, 13~21단계 확인 범위, 백업·복원 한계를 확인한다.
+- 21단계 [학생 실행 설명서](docs/STUDENT_RUNBOOK.md)와 `student/extension.mjs`는 보존했다. 22단계에서 새로운 인증·API·보안 집행을 구현하거나 실제 실행 성공을 추정하지 않는다.
+- **검증 범위:** 과거 `fcfc85ef8f5e85b8468612ad7a42630d8d187181` 제출 원문으로 별도 Linux 폴더에서 실행/HTTP 실측은 수행했으나, **22단계 최종 커밋의 새 Windows 폴더 실행은 미확인**이다. 공식 AI의 원문 판정과 실환경 검증은 다른 일이다.
