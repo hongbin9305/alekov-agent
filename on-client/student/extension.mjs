@@ -789,6 +789,109 @@ export function createStudentView() {
       root.append(make('p', '모든 제안은 사람이 확인하기 전에는 실행되지 않았습니다. 이 화면에는 집행 버튼이 없습니다.'));
       return root;
     },
-    renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
+    renderAction({ status = 'idle', event = null, actionId = null, target = null,
+      receipt = null, observation = null, message = null, confirmationExpiresAt = null, error = null } = {}) {
+      // Each invocation renders only its current input; no old ticket, intent or result is stored.
+      const root = document.createElement('section');
+      const show = (tag, content) => {
+        const node = document.createElement(tag);
+        node.textContent = content;
+        root.append(node);
+      };
+      const safe = value => {
+        if (!['string', 'number'].includes(typeof value)) return '확인 불가';
+        const s = String(value);
+        if (!s || s.length > 500 || /[\u0000-\u001f\u007f]/.test(s)
+          || /(?:authorization|bearer|password|secret|api.key|access.token|refresh.token)\s*[:= ]\s*\S+/i.test(s)) return '확인 불가';
+        return s;
+      };
+      const id = value => typeof value === 'string' && safe(value) !== '확인 불가';
+      const eId = id(event?.id) ? event.id : null;
+      const aId = id(actionId) ? actionId : null;
+      const rId = id(receipt?.requestId) ? receipt.requestId : null;
+      const receiptId = id(receipt?.receiptId) ? receipt.receiptId : null;
+      const state = typeof status === 'string' ? status : 'unknown';
+      show('h3', 'AI 조치 제안 및 연동 시스템 결과');
+      if (state === 'idle') {
+        show('p', '아직 미실행(idle): AI 제안만으로 조치가 실행되지는 않습니다.');
+        show('p', '조치 화면 취소는 이미 서버에 전달된 조치 효과를 되돌리지 않습니다.');
+        return root;
+      }
+
+      if ((id(receipt?.eventId) && receipt.eventId !== eId)
+        || (id(receipt?.actionId) && receipt.actionId !== aId)) {
+        show('p', '결과 불명(unknown): 현재 사건·조치와 영수증의 사건·조치가 일치하지 않습니다.');
+        show('p', '새 집행 요청을 보내지 말고 연동 시스템 결과만 재조회하세요.');
+        return root;
+      }
+
+      if (state === 'loading') {
+        show('p', '조치 준비 또는 연동 시스템 결과 조회 중(loading)이며 결과는 아직 확인되지 않았습니다.');
+      } else if (state === 'prepared') {
+        show('p', '준비됨·미실행(prepared): 조치를 실행하지 않았습니다.');
+        show('p', '실제 대상과 사람 확인 기한을 확인한 뒤 제공 화면에서 별도로 확인해야 합니다.');
+      } else if (state === 'executing') {
+        show('p', '서버에 전달 중(executing): 사람 확인 후 요청 전송 중이며 아직 실행 결과가 없습니다.');
+      } else if (state === 'pending') {
+        show('p', '서버 접수·처리 중(pending): 접수 응답(ACK)은 조치 성공이나 효과 확인이 아닙니다.');
+      } else if (state === 'succeeded') {
+        if (observation?.effectApplied === true && id(observation?.observedAt)
+          && receiptId && (!receipt?.status || receipt.status === 'succeeded')) {
+          show('p', '연동 시스템 실제 관측 결과: 효과 확인(succeeded).');
+          show('p', 'effectApplied: true');
+          show('p', '관측 시각(observedAt): ' + safe(observation.observedAt));
+          show('p', '영수증(receiptId): ' + safe(receiptId));
+        } else {
+          show('p', '결과 불명(unknown): 실제 효과, 관측 시각 또는 영수증이 확인되지 않았습니다.');
+          show('p', '성공이나 효과 없음으로 단정하지 말고 연동 시스템 결과만 재조회하세요.');
+        }
+      } else if (state === 'denied') {
+        show('p', '연동 시스템 거절(denied): 조치 효과 확인 상태가 아닙니다.');
+      } else if (state === 'failed') {
+        show('p', '연동 시스템 실패(failed): 조치 효과 확인 상태가 아닙니다.');
+      } else if (state === 'unknown') {
+        show('p', '결과 불명(unknown): 성공 또는 효과 없음으로 단정할 수 없습니다.');
+        show('p', '같은 조치를 다시 실행하지 말고 「연동 시스템 결과만 재조회」로 원래 요청의 결과를 확인하세요.');
+      } else if (state === 'expired') {
+        show('p', '확인 기한 만료(expired): 이전 준비로는 실행할 수 없으므로 다시 준비하세요.');
+      } else if (state === 'error') {
+        show('p', '요청 처리 안 됨(error): 조치 성공이나 효과를 확인하지 못했습니다.');
+      } else {
+        show('p', '결과 불명(unknown): 상태를 확인할 수 없습니다. 연동 시스템 결과만 재조회하세요.');
+      }
+
+      // Bind event and request identifiers only to this invocation's current snapshot.
+      if (eId) root.setAttribute('data-student-action-event', eId);
+      if (rId) root.setAttribute('data-student-action-request', rId);
+      if (eId) show('p', '사건 ID(event.id): ' + safe(eId));
+      if (Array.isArray(event?.evidence)) {
+        const ids = event.evidence.filter(row => id(row?.id)).map(row => row.id);
+        if (ids.length) show('p', '현재 사건의 근거 ID: ' + ids.map(safe).join(', '));
+      }
+      if (aId) show('p', '조치 ID(actionId): ' + safe(aId));
+      if (id(target?.id)) show('p', '실제 대상 ID(target.id): ' + safe(target.id));
+      if (Number.isSafeInteger(target?.generation) && target.generation > 0) show('p', '대상 세대(target.generation): ' + target.generation);
+      if (rId) show('p', '요청 ID(requestId): ' + safe(rId));
+      if (receiptId) show('p', '영수증 ID(receiptId): ' + safe(receiptId));
+      if (Number.isSafeInteger(receipt?.version) && receipt.version > 0) show('p', '결과 버전(version): ' + receipt.version);
+      if (state === 'prepared' || state === 'expired') show('p', '사람 확인 기한(confirmationExpiresAt): ' + safe(confirmationExpiresAt));
+      if (typeof receipt?.replayed === 'boolean') {
+        show('p', '같은 요청 재확인(replayed): ' + receipt.replayed);
+        if (receipt.replayed) show('p', '동일 requestId의 재응답이며 새 집행 결과가 아닙니다. 중복 요청하지 말고 결과만 재조회하세요.');
+      }
+      if (receipt?.superseded === true) show('p', '이전 응답(superseded)은 최신 결과가 아니므로 재조회하세요.');
+      if (state === 'failed' || state === 'denied') show('p', '처리 사유(message): ' + safe(message));
+      if (state === 'loading' && message != null) show('p', '진행 안내(message): ' + safe(message));
+      if (state === 'error' || (state === 'unknown' && error)) {
+        const code = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,79}$/.test(error.code)
+          ? error.code : 'ACTION_RESULT_UNVERIFIED';
+        show('p', '오류 코드(error.code): ' + code);
+        show('p', '오류 메시지(error.message): ' + safe(error?.message));
+      }
+      if (state === 'prepared') show('p', '제안, 사람 확인, 서버 전달, 접수(ACK), 실제 효과 관측은 각각 다른 단계입니다.');
+      if (state === 'pending' || state === 'executing') show('p', '현재는 요청 진행 상태일 뿐 실제 효과 관측에 따른 완료 상태가 아닙니다.');
+      show('p', '이 학생 화면에는 집행 버튼이 없습니다. 준비·사람 확인·결과 재조회는 제공 화면에서만 진행합니다.');
+      return root;
+    },
   };
 }
