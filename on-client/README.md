@@ -25,3 +25,15 @@ npm start도 같은 서버를 켭니다. 기본 실행은 실제 회사 시스�
 - 오류 코드별 해결: docs/CONNECTION_TROUBLESHOOT.md
 - 시작 틀 업데이트(내 파일 보존): docs/STARTER_UPDATE.md
 - 실제 회사 시스템(SDP)·앱 안 AI 연결은 담당자가 따로 안내할 때만 씁니다: docs/SDP_HOST_CONNECTION.md, docs/AI_SETUP_GUIDE.md. 이 연결은 앱을 처음 켜고 13~16단계 화면을 만들거나 공식 AI 코드 판정을 받기 위한 전제 조건은 아닙니다. 다만 17단계 이후의 실제 연결과 새 환경 재현은 해당 단계의 기준에 따라 따로 확인합니다.
+
+
+## hongbin 학생 구현 · 21단계 실행 문서
+
+이 프로젝트를 ALEPH에서 **hongbin** 보안 Agent로 진행한다. 제공 앱의 원래 이름과 시작 출력은 **케셰브**이며 실행 파일을 이름에 맞춰 바꾸지 않는다.
+
+- **목적·기능:** 본인 로그인/기기/세션, 업무 앱 접근 판정, 접속·XDR 이벤트, AI 연결·사건 근거 설명, 조치 준비/서버 ACK/효과 관측 구분, 공개 패키지 OSV 조회 결과 구분.
+- **구조·제공 경계:** `public/index.html`·`public/app.js`·`src/server.mjs`와 서버 연동 모듈은 제공 코드, `student/extension.mjs`의 8개 `render*` 함수는 학생이 작성한 상태 표시 코드다. 개인 SDP/AI/조치/OSV 연결은 운영자 설정과 실제 권한이 필요하다.
+- **지원 환경·버전(원문 선언):** Windows PowerShell, Node.js `24.19.0` 기준(시작 도구는 22~24 지원), `package.json` 버전 `0.2.11`.
+- **실행:** `on-client` PowerShell에서 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1`. 브라우저 주소 `http://127.0.0.1:5189/`, 종료 `Ctrl+C`. 서버 시작 메시지는 실제 AI 연결 성공이 아니다.
+- **자세한 설치·실행·종료·구성도(Mermaid/텍스트)·오류별 복구·확인/미확인 기록:** [학생 실행 설명서](docs/STUDENT_RUNBOOK.md).
+- 현재 공개 Git 커밋에는 `on-client/package-lock.json`이 없으며, 실제 PC에서 앱 실행·SDP/AI 연결·OSV 조회 성공을 확인했다고 주장하지 않는다. `npm run demo`는 예제 자료, 기본 실행은 `disconnected`다.
