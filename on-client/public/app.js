@@ -1328,7 +1328,160 @@ async function loadAll() {
   }
 }
 
+
+// ---------- 2일차: 실제 로컬 Windows PC 상태 측정 ----------
+// Provided security requests and user/AI status are intentionally unchanged.
+let pcGeneration = 0;
+let pcController = null;
+let pcCurrent = null;
+let pcPrevious = null;
+let pcState = 'idle';
+let pcError = '';
+
+const pcGiB = bytes => (bytes / (1024 ** 3)).toFixed(2) + ' GiB';
+const pcValidBytes = value => Number.isSafeInteger(value) && value >= 0;
+const pcValidPercent = value => Number.isFinite(value) && value >= 0 && value <= 100;
+const pcTime = value => {
+  const date = new Date(value);
+  return typeof value === 'string' && value.length <= 40 && !Number.isNaN(date.getTime())
+    ? date.toLocaleString('ko-KR') : '확인 불가';
+};
+const pcReason = data => typeof data?.reason === 'string' && data.reason.length <= 180
+  ? data.reason : '측정 원인을 확인할 수 없습니다.';
+
+function pcValidate(data) {
+  if (!data || data.source !== 'windows-local' || data.platform !== 'win32'
+    || pcTime(data.observedAt) === '확인 불가') return null;
+  for (const kind of ['cpu', 'memory', 'disks']) {
+    if (!data[kind] || !['ok', 'unavailable'].includes(data[kind].status)
+      || pcTime(data[kind].checkedAt) === '확인 불가') return null;
+  }
+  if (data.cpu.status === 'ok' && (!pcValidPercent(data.cpu.percent) || data.cpu.unit !== '%')) return null;
+  const mem = data.memory;
+  if (mem.status === 'ok' && (mem.unit !== 'bytes' || !pcValidBytes(mem.totalBytes)
+    || !pcValidBytes(mem.usedBytes) || !pcValidBytes(mem.freeBytes)
+    || mem.totalBytes <= 0 || mem.usedBytes + mem.freeBytes !== mem.totalBytes
+    || !pcValidPercent(mem.percent))) return null;
+  const disks = data.disks;
+  if (disks.status === 'ok' && (disks.unit !== 'bytes' || !Array.isArray(disks.drives)
+    || disks.drives.length === 0 || disks.drives.length > 26
+    || disks.drives.some(d => !/^[A-Z]:$/.test(d.id) || d.unit !== 'bytes'
+      || !pcValidBytes(d.totalBytes) || !pcValidBytes(d.freeBytes)
+      || d.totalBytes <= 0 || d.freeBytes > d.totalBytes || pcTime(d.checkedAt) === '확인 불가'))) return null;
+  return data;
+}
+
+function pcRender() {
+  const field = (id, value) => { $(id).textContent = value; };
+  field('pc-cpu-value', '확인 불가');
+  field('pc-memory-value', '확인 불가');
+  field('pc-disk-value', '확인 불가');
+  field('pc-time-value', '측정 전');
+  field('pc-cpu-note', '측정 전');
+  field('pc-memory-note', '측정 전');
+  field('pc-disk-note', '측정 전');
+  field('pc-time-note', '측정값 없음');
+  field('pc-disks-detail', '측정 전');
+  field('pc-metrics-comparison', '측정 기록이 두 번 모이면 변화를 표시합니다.');
+  $('pc-metrics-refresh').disabled = pcState === 'loading';
+
+  if (pcState === 'loading') {
+    field('pc-metrics-status', '로컬 Windows PC 측정 중 · 이전 값을 현재 측정 결과로 표시하지 않습니다.');
+    return;
+  }
+  if (pcState === 'error') {
+    field('pc-metrics-status', '측정 실패 · ' + pcError + ' · 필요한 경우 직접 다시 측정하세요.');
+    field('pc-cpu-note', '현재 측정 실패');
+    field('pc-memory-note', '현재 측정 실패');
+    field('pc-disk-note', '현재 측정 실패');
+    return;
+  }
+  if (!pcCurrent) {
+    field('pc-metrics-status', '측정 전 · 예시 값 없음');
+    return;
+  }
+
+  field('pc-metrics-status', '내 PC 실제 측정 · Windows 로컬 조회 · 연결 없음(SDP)과 별개');
+  field('pc-time-value', pcTime(pcCurrent.observedAt));
+  field('pc-time-note', '측정 응답 시각 · 한국 로컬 시간');
+  if (pcCurrent.cpu.status === 'ok') {
+    field('pc-cpu-value', pcCurrent.cpu.percent.toFixed(1) + '%');
+    field('pc-cpu-note', 'CPU 구간 평균 · ' + pcTime(pcCurrent.cpu.checkedAt) + ' · 단위 %');
+  } else field('pc-cpu-note', pcReason(pcCurrent.cpu) + ' · ' + pcTime(pcCurrent.cpu.checkedAt));
+
+  if (pcCurrent.memory.status === 'ok') {
+    field('pc-memory-value', pcCurrent.memory.percent.toFixed(1) + '%');
+    field('pc-memory-note', pcGiB(pcCurrent.memory.usedBytes) + ' / ' + pcGiB(pcCurrent.memory.totalBytes)
+      + ' 사용 · ' + pcTime(pcCurrent.memory.checkedAt));
+  } else field('pc-memory-note', pcReason(pcCurrent.memory) + ' · ' + pcTime(pcCurrent.memory.checkedAt));
+
+  if (pcCurrent.disks.status === 'ok') {
+    const drives = pcCurrent.disks.drives;
+    const main = drives.find(d => d.id === 'C:') || drives[0];
+    field('pc-disk-value', main.id + ' ' + pcGiB(main.freeBytes));
+    field('pc-disk-note', '남은 공간 · ' + pcTime(main.checkedAt) + ' · 단위 GiB');
+    field('pc-disks-detail', drives.map(d => d.id + ' ' + pcGiB(d.freeBytes)
+      + ' 남음 / ' + pcGiB(d.totalBytes) + ' 전체 (' + (100 * d.freeBytes / d.totalBytes).toFixed(1) + '%)').join(' · '));
+  } else {
+    field('pc-disk-note', pcReason(pcCurrent.disks) + ' · ' + pcTime(pcCurrent.disks.checkedAt));
+    field('pc-disks-detail', '확인 불가 · ' + pcReason(pcCurrent.disks));
+  }
+
+  if (!pcPrevious) return;
+  const comparisons = [];
+  if (pcPrevious.cpu.status === 'ok' && pcCurrent.cpu.status === 'ok') {
+    const difference = (pcCurrent.cpu.percent - pcPrevious.cpu.percent);
+    comparisons.push('CPU ' + (difference >= 0 ? '+' : '') + difference.toFixed(1) + '%p');
+  }
+  if (pcPrevious.memory.status === 'ok' && pcCurrent.memory.status === 'ok') {
+    const difference = pcCurrent.memory.percent - pcPrevious.memory.percent;
+    comparisons.push('메모리 ' + (difference >= 0 ? '+' : '') + difference.toFixed(1) + '%p');
+  }
+  const prevDrive = pcPrevious.disks.status === 'ok' && pcPrevious.disks.drives.find(d => d.id === 'C:');
+  const nextDrive = pcCurrent.disks.status === 'ok' && pcCurrent.disks.drives.find(d => d.id === 'C:');
+  if (prevDrive && nextDrive) {
+    const difference = (nextDrive.freeBytes - prevDrive.freeBytes) / (1024 ** 3);
+    comparisons.push('C: 여유 공간 ' + (difference >= 0 ? '+' : '') + difference.toFixed(2) + ' GiB');
+  }
+  field('pc-metrics-comparison', comparisons.length
+    ? '이전 실제 측정(' + pcTime(pcPrevious.observedAt) + ') 대비 ' + comparisons.join(' · ')
+    : '동일 항목의 유효한 이전 측정이 없어 비교할 수 없습니다.');
+}
+
+async function pcLoad() {
+  const gen = ++pcGeneration;
+  pcController?.abort();
+  const controller = new AbortController();
+  pcController = controller;
+  pcState = 'loading';
+  pcError = '';
+  pcRender();
+  try {
+    const result = await request('/api/pc-metrics', { signal: controller.signal });
+    if (gen !== pcGeneration) return;
+    const data = result.ok ? pcValidate(result.data) : null;
+    if (!data) {
+      pcState = 'error';
+      pcError = result.ok ? '실제 측정 응답 형식을 확인할 수 없습니다.'
+        : (result.error?.message || '요청을 처리하지 못했습니다.');
+      pcCurrent = null;
+      pcPrevious = null;
+    } else {
+      pcPrevious = pcCurrent;
+      pcCurrent = data;
+      pcState = 'ok';
+    }
+  } finally {
+    if (gen === pcGeneration) {
+      pcController = null;
+      pcRender();
+    }
+  }
+}
+
 function init() {
+  $('pc-metrics-refresh').addEventListener('click', () => pcLoad());
+  pcRender();
   setupNav();
   $('refresh').addEventListener('click', () => loadAll());
   $('diag-load').addEventListener('click', () => loadDiagnostics());

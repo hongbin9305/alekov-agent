@@ -46,6 +46,46 @@
       <section id="view-protection" class="view" role="tabpanel" aria-labelledby="tab-protection">
         <h1>보호 현황</h1>
 
+        <section class="card pc-monitor" aria-labelledby="pc-monitor-title">
+          <div class="pc-monitor-heading">
+            <div>
+              <h2 id="pc-monitor-title">내 PC 실측 상태 <span class="tag">로컬 Windows · 읽기 전용</span></h2>
+              <p class="muted">CPU·메모리·디스크 수치는 버튼을 누를 때마다 실제 PC에서 측정합니다. 예제 숫자를 사용하지 않습니다.</p>
+            </div>
+            <button id="pc-metrics-refresh" class="btn" type="button">내 PC 상태 측정</button>
+          </div>
+          <p class="pc-status" id="pc-metrics-status" role="status" aria-live="polite">측정 전 · 예시 값 없음</p>
+          <div class="pc-metric-grid" aria-label="PC 상태 요약 카드 네 개">
+            <div class="pc-metric-card">
+              <h3>CPU 사용률</h3>
+              <strong id="pc-cpu-value">확인 불가</strong>
+              <p id="pc-cpu-note">측정 전</p>
+            </div>
+            <div class="pc-metric-card">
+              <h3>메모리 사용률</h3>
+              <strong id="pc-memory-value">확인 불가</strong>
+              <p id="pc-memory-note">측정 전</p>
+            </div>
+            <div class="pc-metric-card">
+              <h3>디스크 남은 공간</h3>
+              <strong id="pc-disk-value">확인 불가</strong>
+              <p id="pc-disk-note">측정 전</p>
+            </div>
+            <div class="pc-metric-card">
+              <h3>마지막 측정</h3>
+              <strong class="pc-time-value" id="pc-time-value">측정 전</strong>
+              <p id="pc-time-note">네 PC 실제 측정 시각을 표시합니다</p>
+            </div>
+          </div>
+          <div class="pc-monitor-detail">
+            <h3>전체 디스크</h3>
+            <p id="pc-disks-detail">측정 전</p>
+            <h3>이전 측정 대비 변화</h3>
+            <p id="pc-metrics-comparison">측정 기록이 두 번 모이면 변화를 표시합니다.</p>
+            <p class="muted">이전 측정 기록은 이 브라우저 탭에서만 보관되며 페이지를 새로고침하면 초기화됩니다. 저장형 추이 그래프는 아직 구현되지 않았습니다.</p>
+          </div>
+        </section>
+
         <div class="grid-2">
           <section class="card provided" aria-labelledby="identity-title">
             <h2 id="identity-title">현재 로그인 <span class="tag">제공</span></h2>

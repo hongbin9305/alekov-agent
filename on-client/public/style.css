@@ -207,3 +207,22 @@ main:focus { outline: none; }
 .state-ok { background: var(--allow-soft); color: var(--allow); }
 .ai-result[data-state="connected"] { border-left: 3px solid var(--allow); padding-left: 12px; }
 .ai-result[data-state="unknown"] { border-left: 3px solid var(--unknown); padding-left: 12px; }
+
+
+/* 2일차: read-only local PC telemetry panel, separate from provided security engine. */
+.pc-monitor { border-left: 4px solid #2463bd; }
+.pc-monitor-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.pc-monitor-heading .muted { margin: 4px 0 12px; }
+.pc-status { padding: 8px 10px; margin: 0 0 12px; border-radius: 6px; background: var(--accent-soft); }
+.pc-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.pc-metric-card { background: #f7f9fc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; min-width: 0; }
+.pc-metric-card h3 { color: var(--muted); font-size: 0.9rem; }
+.pc-metric-card strong { display: block; font-size: 1.35rem; margin: 8px 0; overflow-wrap: anywhere; }
+.pc-metric-card .pc-time-value { font-size: 0.95rem; }
+.pc-metric-card p { margin: 0; color: var(--muted); font-size: 0.78rem; overflow-wrap: anywhere; }
+.pc-monitor-detail { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+.pc-monitor-detail h3 { margin: 10px 0 4px; }
+.pc-monitor-detail p { margin: 0 0 8px; overflow-wrap: anywhere; }
+@media (max-width: 1300px) {
+  .pc-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

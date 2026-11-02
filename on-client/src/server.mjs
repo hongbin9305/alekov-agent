@@ -16,6 +16,7 @@ import {prepareLearnerSupportRequest} from './ai/learner-support-contract.mjs';
 import {createVaultOnAiService} from './ai/vault-service.mjs';
 import {createConnectionManager} from './connection/manager.mjs';
 import {createProjectScanner} from './vulnerabilities/project-scan.mjs';
+import {readLocalPcMetrics} from './pc-metrics.mjs';
 import {buildLocalLearnerSupportGuide,isLearnerSupportProblemKind,readLocalLearnerSupportObservation} from './learner-support/service.mjs';
 import {nativeOwn,nativePublicError} from './connection/native-login.mjs';
 import {createNativeHostContext,captureNativeHostConfiguration,readNativeHostConfiguration,openNativeHostOperation,readNativeHostOperation,assertNativeHostOperation,createNativeOperationVault,closeNativeHostOperation} from './connection/native-context.mjs';
@@ -680,6 +681,11 @@ export function createOnServer(serverOptions={}) {
         assertAlive();
         send(200,{ok:true,data:guide});return;
         }finally{closeNativeHostOperation(nativeOperation);}
+      }
+      if(req.method==='GET'&&url.pathname==='/api/pc-metrics'){
+        // A separate local-only read-only path; never uses or alters the SDP engine.
+        const data=await bounded(signal=>readLocalPcMetrics({signal}));
+        send(200,{ok:true,data});return;
       }
       if(req.method==='GET'&&url.pathname==='/api/diagnostics'){
         // 자동 호출이나 비밀 원문·전체 설정 출력 없이 로컬 연결 상태만 진단한다.
