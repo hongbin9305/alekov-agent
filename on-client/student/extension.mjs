@@ -393,6 +393,101 @@ export function createStudentView() {
           + message + ' · 오류 코드: ' + code + '. ' + retryAdvice;
       };
 
+      // Day 4: local student-slot information only. Existing PC metric/security refresh buttons
+      // remain in the provided screen and are intentionally not duplicated here.
+      const overview = document.createElement('section');
+      overview.setAttribute('aria-label', '핵심 기능 3가지 안내');
+      overview.style.marginBottom = '16px';
+      overview.style.padding = '14px';
+      overview.style.border = '1px solid #dcd5f0';
+      overview.style.borderRadius = '10px';
+      overview.style.background = '#faf8ff';
+      const overviewTitle = make('h3', 'hongbin · 핵심 기능 3가지');
+      overviewTitle.style.fontSize = '1.15rem';
+      overviewTitle.style.margin = '0 0 8px';
+      overview.append(overviewTitle);
+      overview.append(make('p',
+        '아래 안내는 기능 위치와 검증 범위입니다. PC 실측값은 위쪽 조회 카드에서만 확인하며, 이 영역에 예시 숫자를 넣지 않습니다.'));
+      const overviewGrid = document.createElement('div');
+      overviewGrid.style.display = 'grid';
+      overviewGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(190px, 1fr))';
+      overviewGrid.style.gap = '10px';
+      const features = [
+        ['1 · 내 PC 상태',
+          '위쪽 「내 PC 상태 측정」으로 CPU·메모리·디스크를 직접 조회합니다. 각 값의 측정 시각을 확인하세요.'],
+        ['2 · 기록 보기',
+          '위쪽 「연결·설정·기록 조회」에서 Windows 로그 건수를 확인하고, 왼쪽 「보안 기록」에서 기존 XDR 자료를 봅니다. 서로 다른 자료입니다.'],
+        ['3 · 위험 알림',
+          'Windows 경고·오류 건수는 공격 탐지가 아닙니다. SDP 원천 XDR 기록을 확인하지 못한 경우 위험 여부는 확인 불가입니다.'],
+      ];
+      for (const [title, description] of features) {
+        const card = document.createElement('section');
+        card.style.border = '1px solid #e5e0ef';
+        card.style.background = '#fff';
+        card.style.borderRadius = '8px';
+        card.style.padding = '12px';
+        const heading = make('h4', title);
+        heading.style.fontSize = '1rem';
+        heading.style.fontWeight = '700';
+        heading.style.color = '#2f2351';
+        heading.style.margin = '0 0 8px';
+        card.append(heading, make('p', description));
+        overviewGrid.append(card);
+      }
+      overview.append(overviewGrid);
+      const refreshGuide = make('p',
+        '다시 조회: 상단 「내 PC 상태 측정」·「연결·설정·기록 조회」 또는 기존 화면의 「다시 불러오기」 버튼을 사용하세요. ' +
+        '버튼은 Tab 키로 이동하고 Enter 또는 Space 키로 실행합니다. 조회 중에는 해당 제공 화면에서 대기 상태를 표시합니다.');
+      refreshGuide.style.margin = '10px 0 0';
+      overview.append(refreshGuide);
+      root.append(overview);
+
+      const failedResources = [
+        ['기기', devices, '페이지 위쪽 「다시 불러오기」'],
+        ['세션', sessions, '페이지 위쪽 「다시 불러오기」'],
+        ['도움정보', diagnostics, '제공 화면의 「도움정보 불러오기」'],
+      ].filter(([, resource]) => resource?.status === 'error');
+      const loadingResources = [
+        ['기기', devices], ['세션', sessions], ['도움정보', diagnostics],
+      ].filter(([, resource]) => resource?.status === 'loading').map(([label]) => label);
+      if (loadingResources.length) {
+        const busy = make('p', '조회 중: ' + loadingResources.join('·') +
+          ' · 확인된 값이 나오기 전에는 정상이나 안전으로 판단하지 않습니다.');
+        busy.setAttribute('role', 'status');
+        busy.setAttribute('aria-live', 'polite');
+        busy.style.padding = '10px 12px';
+        busy.style.background = '#e8f0ff';
+        busy.style.borderRadius = '8px';
+        root.append(busy);
+      }
+      if (failedResources.length) {
+        const failureBox = document.createElement('section');
+        failureBox.setAttribute('role', 'alert');
+        failureBox.setAttribute('aria-label', '조회 오류와 다음 행동');
+        failureBox.style.padding = '12px 14px';
+        failureBox.style.border = '1px solid #cb4b35';
+        failureBox.style.borderLeft = '4px solid #b42318';
+        failureBox.style.borderRadius = '8px';
+        failureBox.style.background = '#fff3f0';
+        const failedTitle = make('h4', '조회 실패 · ' +
+          failedResources.map(([label]) => label).join('·') + ' 확인 불가');
+        failedTitle.style.fontSize = '1rem';
+        failedTitle.style.margin = '0 0 8px';
+        failureBox.append(failedTitle);
+        const errors = document.createElement('ul');
+        errors.style.margin = '0 0 8px';
+        errors.style.paddingLeft = '20px';
+        for (const [label, resource, action] of failedResources) {
+          errors.append(make('li',
+            label + ': ' + safe(resource.error?.message, '원인을 확인할 수 없습니다.').slice(0, 240) +
+            ' (코드: ' + safeCode(resource.error?.code) + '). 다음 행동: ' +
+            action + ' 버튼을 직접 눌러 다시 확인하세요.'));
+        }
+        failureBox.append(errors, make('p',
+          '실패한 항목은 이전 값을 정상으로 대체하지 않습니다. 자동 재시도하지 않으며, 문제가 계속되면 제공 화면의 도움정보에서 코드와 시각을 확인하세요.'));
+        root.append(failureBox);
+      }
+
       root.append(make('h3', '기기·세션·알림·도움정보'));
       root.append(make('p', '전체 연결 상태: ' + labeled(modeLabels, mode)));
       root.append(make('p', '등록 기기는 현재 사용자에게 속한 최대 100개만 표시합니다. 운영체제 등 확인되지 않은 값은 추정하지 않습니다.'));
@@ -430,8 +525,9 @@ export function createStudentView() {
 
       const alertArea = document.createElement('section');
       alertArea.append(make('h4', '알림'));
+      alertArea.append(make('p', '여기에는 연결·조회 실패 안내도 포함됩니다. Windows 이벤트의 경고·오류 건수는 침해·공격 탐지 결과가 아닙니다.'));
       if (!Array.isArray(notifications) || notifications.length === 0) {
-        alertArea.append(make('p', '주의할 알림이 없습니다.'));
+        alertArea.append(make('p', '현재 표시할 알림 자료가 없습니다. 이 상태는 침해 없음이나 안전을 보증하지 않으며, SDP 연결·조회 실패 시 XDR 위험 여부는 확인 불가입니다.'));
       } else {
         const list = document.createElement('ul');
         for (const item of notifications) {
