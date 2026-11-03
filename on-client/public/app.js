@@ -391,6 +391,7 @@ function renderMode() {
   badge.textContent = MODE_LABELS[mode];
   $('checked-at').textContent = state.checkedAt ? `확인 시각 ${formatTime(state.checkedAt)}` : '';
   renderStudent('status');
+  renderSdpConnection();
 }
 
 function renderErrors() {
@@ -1401,7 +1402,7 @@ function pcRender() {
     return;
   }
 
-  field('pc-metrics-status', '내 PC 실제 측정 · Windows 로컬 조회 · 연결 없음(SDP)과 별개');
+  field('pc-metrics-status', '내 PC 실제 측정 · Windows 로컬 조회 · SDP 서버 연결은 아래 별도 표시');
   field('pc-time-value', pcTime(pcCurrent.observedAt));
   field('pc-time-note', '측정 응답 시각 · 한국 로컬 시간');
   if (pcCurrent.cpu.status === 'ok') {
@@ -1479,7 +1480,146 @@ async function pcLoad() {
   }
 }
 
+
+// Day 3: read-only PC observations, independent of existing ZTNA/SDP security features.
+let secGeneration=0,secController=null,secBusy=false,secData=null,secError='';
+const secTime=v=>{
+  if(typeof v!=='string'||v.length>40)return '확인 불가';
+  const date=new Date(v);
+  return Number.isNaN(date.getTime())?'확인 불가':date.toLocaleString('ko-KR');
+};
+const secText=(v,max=180)=>typeof v==='string'&&v.length>0&&v.length<=max
+  &&!/[\u0000-\u001f\u007f]/.test(v)?v:null;
+function secValidate(d){
+  if(!d||d.source!=='windows-local'||d.platform!=='win32'||secTime(d.observedAt)==='확인 불가')return false;
+  if(!d.network||!d.firewall||!d.events)return false;
+  if(!['ok','unavailable'].includes(d.network.status)||!['ok','unavailable'].includes(d.firewall.status)
+    ||!['ok','partial','unavailable'].includes(d.events.status))return false;
+  if([d.network,d.firewall,d.events].some(x=>secTime(x.checkedAt)==='확인 불가'))return false;
+  if(d.network.status==='ok'&&(!Array.isArray(d.network.adapters)||d.network.adapters.length>40
+    ||!Array.isArray(d.network.ips)||!['ok','unavailable'].includes(d.network.ipStatus)
+    ||d.network.adapters.some(a=>!secText(a.name,100)||!secText(a.status,40)
+      ||!secText(a.speed,50)||!Number.isSafeInteger(a.index))
+    ||d.network.ips.some(a=>!secText(a.ip,45)||!Number.isSafeInteger(a.index)
+      ||!Number.isInteger(a.prefix)||a.prefix<0||a.prefix>32)))return false;
+  if(d.firewall.status==='ok'&&(!Array.isArray(d.firewall.profiles)||d.firewall.profiles.length===0
+    ||d.firewall.profiles.length>3||d.firewall.profiles.some(p=>!['Domain','Private','Public'].includes(p.name)
+      ||![true,false,null].includes(p.enabled)||!secText(p.inbound,50)||!secText(p.outbound,50))))return false;
+  if(d.events.windowHours!==24||secTime(d.events.windowStart)==='확인 불가'
+    ||!Array.isArray(d.events.logs)||d.events.logs.length!==2)return false;
+  for(let i=0;i<2;i++){
+    const x=d.events.logs[i];
+    if(x.name!==['System','Application'][i]||!['ok','unavailable'].includes(x.status)
+      ||secTime(x.checkedAt)==='확인 불가'
+      ||(x.status==='ok'&&(!Number.isSafeInteger(x.warningCount)||x.warningCount<0
+        ||!Number.isSafeInteger(x.errorCount)||x.errorCount<0)))return false;
+  }
+  const ok=d.events.logs.filter(x=>x.status==='ok').length;
+  return d.events.status===(ok===2?'ok':ok===1?'partial':'unavailable');
+}
+function renderSdpConnection(){
+  const value=$('pc-sdp-value'),note=$('pc-sdp-note');
+  if(!value||!note)return;
+  const resource=state.me,mode=resource?.meta?.mode??'unknown';
+  if(resource?.status==='loading'){
+    value.textContent='확인 중';
+    note.textContent='기존 엔진 사용자 정보 조회 중 · 로컬 PC 조회와 별개';
+  }else if(mode==='disconnected'&&(resource?.status==='error'||resource?.status==='ok')){
+    value.textContent='SDP 미연결';
+    note.textContent='기본 실행의 기존 서버·에이전트 연결 어댑터 없음 · PC 조회 성공과 무관';
+  }else if(mode==='demo'){
+    value.textContent='확인 불가';
+    note.textContent='예제(demo) 모드 · 실제 SDP 연결 검증이 아닙니다.';
+  }else if(mode==='connected'&&resource?.status==='ok'){
+    value.textContent='기존 엔진 응답 확인';
+    note.textContent='사용자 정보 조회는 성공했지만 원천 SDP 서버의 실제 연결은 별도 검증이 필요합니다.';
+  }else if(resource?.status==='error'){
+    value.textContent='확인 불가';
+    note.textContent='실제 연결 상태 검증 실패 ('+(secText(resource.error?.code,60)||'원인 미상')
+      +') · 미연결로 단정하지 않습니다.';
+  }else{
+    value.textContent='확인 불가';
+    note.textContent='실제 SDP 서버 연결을 확인할 근거가 없습니다.';
+  }
+}
+function secRender(){
+  const put=(id,v)=>{$(id).textContent=v;};
+  for(const name of ['pc-network','pc-firewall','pc-events']){
+    put(name+'-value','확인 불가');put(name+'-note','조회 전');
+  }
+  put('pc-security-checked','조회 전');
+  $('pc-security-refresh').disabled=secBusy;
+  renderSdpConnection();
+  if(secBusy){
+    put('pc-security-status','Windows 설정·이벤트 조회 중 · 이전 자료를 최신 값으로 표시하지 않습니다.');
+    return;
+  }
+  if(secError){put('pc-security-status','확인 불가 · '+secError+' · 필요한 경우 직접 다시 조회하세요.');return;}
+  if(!secData){put('pc-security-status','조회 전 · 실제 데이터 없음');return;}
+  const d=secData;
+  put('pc-security-status','실제 PC 읽기 전용 조회 완료 · 항목별 성공 또는 확인 불가 표시 · SDP 연결과 별개');
+  const times=['PC 측정: '+secTime(d.observedAt)];
+  if(d.network.status==='ok'){
+    const up=d.network.adapters.filter(a=>a.status.toLowerCase()==='up').length;
+    put('pc-network-value','링크 연결 '+up+' / '+d.network.adapters.length+'개');
+    put('pc-network-note',(d.network.adapters.map(a=>{
+      const ips=d.network.ipStatus==='ok'
+        ?d.network.ips.filter(x=>x.index===a.index).map(x=>x.ip+'/'+x.prefix).join(', ')
+        :'IPv4 확인 불가';
+      return a.name+' · '+a.status+' · '+a.speed+' · '+(ips||'IPv4 없음');
+    }).join(' | ')||'조회된 어댑터 없음')
+      +' · '+(d.network.ipStatus==='ok'?'IPv4 조회 완료':'IPv4 확인 불가: 개별 조회 실패'));
+  }else put('pc-network-note','확인 불가 · '+(secText(d.network.reason)||'일반 권한 조회 실패'));
+  times.push('네트워크: '+secTime(d.network.checkedAt));
+  if(d.firewall.status==='ok'){
+    const profiles=d.firewall.profiles;
+    const enabled=profiles.filter(p=>p.enabled===true).length;
+    const unknown=profiles.filter(p=>p.enabled===null).length;
+    put('pc-firewall-value','켜짐 '+enabled+' / '+profiles.length+'개 프로필'
+      +(unknown?' · 일부 확인 불가':''));
+    put('pc-firewall-note',profiles.map(p=>p.name+': '
+      +(p.enabled===true?'켜짐':p.enabled===false?'꺼짐':'확인 불가')
+      +' · 수신 '+p.inbound+' / 송신 '+p.outbound).join(' | ')
+      +' · ActiveStore 기준 · 설정 변경 없음');
+  }else put('pc-firewall-note','확인 불가 · '+(secText(d.firewall.reason)||'일반 권한 조회 실패'));
+  times.push('방화벽: '+secTime(d.firewall.checkedAt));
+  const logs=d.events.logs,ok=logs.filter(log=>log.status==='ok');
+  if(ok.length===2){
+    put('pc-events-value','경고 '+ok.reduce((n,x)=>n+x.warningCount,0)+'건 · 오류 '
+      +ok.reduce((n,x)=>n+x.errorCount,0)+'건');
+  }else if(ok.length===1){
+    put('pc-events-value','일부 확인 · '+ok[0].name+' 경고 '+ok[0].warningCount+'건 / 오류 '+ok[0].errorCount+'건');
+  }
+  put('pc-events-note','최근 24시간 ('+secTime(d.events.windowStart)+'부터) · '
+    +logs.map(x=>x.name+': '+(x.status==='ok'
+      ?'경고 '+x.warningCount+'건 / 오류 '+x.errorCount+'건'
+      :'확인 불가 ('+(secText(x.reason)||'일반 권한 조회 실패')+')')).join(' | ')
+    +' · 침해·공격 탐지 결과가 아닙니다.');
+  times.push('이벤트: '+secTime(d.events.checkedAt));
+  put('pc-security-checked',times.join(' · '));
+}
+async function secLoad(){
+  const generation=++secGeneration;
+  secController?.abort();
+  const controller=new AbortController();
+  secController=controller;secBusy=true;secError='';secData=null;secRender();
+  try{
+    const response=await request('/api/pc-security',{signal:controller.signal});
+    if(generation!==secGeneration)return;
+    if(!response.ok||!secValidate(response.data)){
+      secError=response.ok?'응답 형식을 검증할 수 없습니다.'
+        :(secText(response.error?.message)||'조회 요청 실패');
+    }else secData=response.data;
+  }catch{
+    if(generation===secGeneration)secError='로컬 PC 조회 요청에 실패했습니다.';
+  }finally{
+    if(generation===secGeneration){secBusy=false;secController=null;secRender();}
+  }
+}
+
 function init() {
+  $('pc-security-refresh').addEventListener('click', () => secLoad());
+  secRender();
   $('pc-metrics-refresh').addEventListener('click', () => pcLoad());
   pcRender();
   setupNav();
