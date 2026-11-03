@@ -1,35 +1,35 @@
 # hongbin 보안 Agent — 처음 보는 사람을 위한 실행 안내 (5일차)
 
 **목표:** 설치 파일을 만들지 않고 Windows PC의 프로젝트 폴더에서 실행하고, 실제 PC 측정값을 확인한다.
-**현재 대상 버전:** \`feature/day5-quickstart\` · 기존 22단계 제출본과 별도 개발 브랜치.
+**현재 대상 버전:** `feature/day5-quickstart` · 기존 22단계 제출본과 별도 개발 브랜치.
 **주의:** 화면과 시작 로그에 보이는 **케셰브**는 기존 앱 틀의 이름이며, 이 프로젝트의 이름은 **hongbin**이다.
 
 ## 1. 준비 — 처음 받는 사람
 
 - Windows 10/11, 브라우저(Chrome/Edge), **Git**, **Node.js 22~24**가 필요하다. 수업 기준은 24.19.0이며 24.22.0에서도 실행 확인했다.
-- **기존 프로젝트가 있는 경우에는 복제하지 않는다.** 파일 탐색기로 기존 \`on-client\` 폴더를 열고 2번으로 간다.
-- 새로 받는 사람은 Windows 키 + E → **바탕 화면** 폴더 → 맨 위 주소창에 \`powershell\` 입력 → Enter를 누른다. 열린 PowerShell에서 아래 명령을 **한 줄씩** 실행한다.
+- **기존 프로젝트가 있는 경우에는 복제하지 않는다.** 파일 탐색기로 기존 `on-client` 폴더를 열고 2번으로 간다.
+- 새로 받는 사람은 Windows 키 + E → **바탕 화면** 폴더 → 맨 위 주소창에 `powershell` 입력 → Enter를 누른다. 열린 PowerShell에서 아래 명령을 **한 줄씩** 실행한다.
 
-\`\`\`powershell
+```powershell
 git --version
 node --version
 git clone --branch feature/day5-quickstart --single-branch https://github.com/hongbin9305/alekov-agent.git hongbin-day5-test
 cd .\hongbin-day5-test\on-client
-\`\`\`
+```
 
 Git 또는 Node 명령을 찾지 못하면 해당 프로그램이 설치되지 않은 것이다. Git for Windows(https://git-scm.com/downloads/win)와 Node.js(https://nodejs.org/)를 설치한 뒤 **새 PowerShell**에서 다시 시작한다. **기존 폴더를 덮어쓰지 않는다.**
 
-## 2. 실행 — \`on-client\` 폴더에서
+## 2. 실행 — `on-client` 폴더에서
 
-기존 폴더를 쓰는 사람: 파일 탐색기에서 해당 \`on-client\` 폴더를 열고, **위쪽 주소창에 \`powershell\` → Enter**. 새로 복제한 사람은 위 명령을 실행한 PowerShell을 그대로 사용한다.
+기존 폴더를 쓰는 사람: 파일 탐색기에서 해당 `on-client` 폴더를 열고, **위쪽 주소창에 `powershell` → Enter**. 새로 복제한 사람은 위 명령을 실행한 PowerShell을 그대로 사용한다.
 
-\`\`\`powershell
+```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Port 5190
-\`\`\`
+```
 
-\`케셰브가 켜졌습니다\`라는 메시지가 나오면 **로컬 앱 서버가 응답한 것**이다. 이것만으로 외부 SDP 서버나 AI 연결이 성공한 것은 아니다. \`-ExecutionPolicy Bypass\`는 현재 명령 실행에만 적용하며 전역 보안 정책을 바꾸지 않는다. 별도의 \`npm install\`, 관리자 권한 또는 포장 명령은 필요하지 않다.
+`케셰브가 켜졌습니다`라는 메시지가 나오면 **로컬 앱 서버가 응답한 것**이다. 이것만으로 외부 SDP 서버나 AI 연결이 성공한 것은 아니다. `-ExecutionPolicy Bypass`는 현재 명령 실행에만 적용하며 전역 보안 정책을 바꾸지 않는다. 별도의 `npm install`, 관리자 권한 또는 포장 명령은 필요하지 않다.
 
-**브라우저 주소창에서 직접 입력:** \`http://127.0.0.1:5190/\` (링크를 눌러 붙는 \`?utm_source=...\` 같은 문자 없이 정확히 입력).
+**브라우저 주소창에서 직접 입력:** `http://127.0.0.1:5190/` (링크를 눌러 붙는 `?utm_source=...` 같은 문자 없이 정확히 입력).
 
 ## 3. 기능 확인 — 값과 측정 시각까지
 
@@ -43,15 +43,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Po
 
 | 증상 | 다음 행동 |
 | --- | --- |
-| \`포트 5190 ... 사용\` | 실행 명령을 \`-Port 5191\`로 바꾸고 주소도 \`http://127.0.0.1:5191/\`로 바꾼다. 기존 프로그램을 강제 종료하지 않는다. |
-| \`QUERY_REJECTED\` | 브라우저 주소창에서 \`Ctrl + L\` → 전체 삭제 → \`http://127.0.0.1:5190/\` 직접 입력. 주소 뒤의 \`?...\`나 \`**\`를 제거한다. |
-| \`앱 폴더가 아닙니다\` | PowerShell이 실제 \`on-client\` 폴더에서 열렸는지 확인한다. |
-| Node.js 오류 | \`node --version\`을 확인한다. 지원 범위 22~24; 새 버전 설치 후 새 PowerShell 사용. |
-| 화면이 예전 모습 | 올바른 포트와 브랜치인지 확인하고 브라우저에서 \`Ctrl + Shift + R\`. |
+| `포트 5190 ... 사용` | 실행 명령을 `-Port 5191`로 바꾸고 주소도 `http://127.0.0.1:5191/`로 바꾼다. 기존 프로그램을 강제 종료하지 않는다. |
+| `QUERY_REJECTED` | 브라우저 주소창에서 `Ctrl + L` → 전체 삭제 → `http://127.0.0.1:5190/` 직접 입력. 주소 뒤의 `?...`나 `**`를 제거한다. |
+| `앱 폴더가 아닙니다` | PowerShell이 실제 `on-client` 폴더에서 열렸는지 확인한다. |
+| Node.js 오류 | `node --version`을 확인한다. 지원 범위 22~24; 새 버전 설치 후 새 PowerShell 사용. |
+| 화면이 예전 모습 | 올바른 포트와 브랜치인지 확인하고 브라우저에서 `Ctrl + Shift + R`. |
 | PC 측정·로그 실패 | 화면에 나타난 **실패한 항목/이유**를 읽고 해당 조회 버튼을 직접 다시 누른다. 관리자 권한 상승·설정 변경은 하지 않는다. |
-| \`ENGINE_NOT_CONNECTED\` | 외부 SDP 엔진 미연결. 로컬 PC 측정과 분리해 확인한다. 연결 자격/키를 임의로 입력하지 않는다. |
+| `ENGINE_NOT_CONNECTED` | 외부 SDP 엔진 미연결. 로컬 PC 측정과 분리해 확인한다. 연결 자격/키를 임의로 입력하지 않는다. |
 
-**앱 종료:** 실행한 PowerShell에서 \`Ctrl + C\`. 파일 삭제·이동·앱 포장을 하지 않는다.
+**앱 종료:** 실행한 PowerShell에서 `Ctrl + C`. 파일 삭제·이동·앱 포장을 하지 않는다.
 
 ## 5. 다른 사람이 실행해 본 결과 기록 (아직 미검증)
 
