@@ -86,6 +86,45 @@
           </div>
         </section>
 
+        <section class="card pc-monitor pc-security-panel" aria-labelledby="pc-security-title">
+          <div class="pc-monitor-heading">
+            <div>
+              <h2 id="pc-security-title">네트워크 · 방화벽 · Windows 기록 <span class="tag">읽기 전용 · 로컬 Windows</span></h2>
+              <p class="muted">PC 자체 조회 결과와 기존 SDP 서버 연결 상태를 구분합니다.</p>
+            </div>
+            <button type="button" class="btn" id="pc-security-refresh">연결·설정·기록 조회</button>
+          </div>
+          <p class="pc-status" id="pc-security-status" role="status" aria-live="polite">조회 전 · 실제 데이터 없음</p>
+          <div class="pc-security-grid">
+            <div class="pc-security-cell">
+              <h3>네트워크 연결·구성</h3>
+              <strong id="pc-network-value">확인 불가</strong>
+              <p id="pc-network-note">조회 전</p>
+            </div>
+            <div class="pc-security-cell">
+              <h3>Windows 방화벽 설정</h3>
+              <strong id="pc-firewall-value">확인 불가</strong>
+              <p id="pc-firewall-note">조회 전</p>
+            </div>
+            <div class="pc-security-cell">
+              <h3>Windows 기록 (최근 24시간)</h3>
+              <strong id="pc-events-value">확인 불가</strong>
+              <p id="pc-events-note">조회 전</p>
+              <p class="pc-safety-note">System·Application 경고·오류 건수는 침해·공격 탐지 결과가 아닙니다.</p>
+            </div>
+            <div class="pc-security-cell pc-sdp-cell">
+              <h3>SDP 서버 연결 (별도 상태)</h3>
+              <strong id="pc-sdp-value">확인 중</strong>
+              <p id="pc-sdp-note">기존 엔진 연결 확인 중 · PC 조회 성공과 무관</p>
+            </div>
+          </div>
+          <div class="pc-monitor-detail">
+            <h3>조회 시각</h3>
+            <p id="pc-security-checked">조회 전</p>
+            <p class="muted">네트워크 링크 연결이 인터넷 접속을 증명하지 않으며, 방화벽 켜짐만으로 안전을 보장하지 않습니다. 설정 변경·공격 시험은 수행하지 않습니다.</p>
+          </div>
+        </section>
+
         <div class="grid-2">
           <section class="card provided" aria-labelledby="identity-title">
             <h2 id="identity-title">현재 로그인 <span class="tag">제공</span></h2>
