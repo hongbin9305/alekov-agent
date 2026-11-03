@@ -226,3 +226,15 @@ main:focus { outline: none; }
 @media (max-width: 1300px) {
   .pc-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+
+/* Day 3: Windows read-only settings, events, and SDP status distinct from PC metrics. */
+.pc-security-panel { border-left-color: var(--student); }
+.pc-security-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.pc-security-cell { background:#f7f9fc; border:1px solid var(--border); border-radius:8px; padding:14px; min-width:0; }
+.pc-security-cell h3 { color:var(--muted); font-size:0.9rem; margin-bottom:8px; }
+.pc-security-cell strong { display:block; font-size:1.12rem; overflow-wrap:anywhere; }
+.pc-security-cell p { font-size:0.82rem; color:var(--muted); overflow-wrap:anywhere; white-space:pre-wrap; margin:8px 0 0; }
+.pc-security-cell .pc-safety-note { font-weight:600; color:#84510f; }
+.pc-sdp-cell { border-left:3px solid var(--student); background:#f6f1fd; }
+@media(max-width:1180px){ .pc-security-grid { grid-template-columns:1fr; } }
