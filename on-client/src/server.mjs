@@ -17,6 +17,7 @@ import {createVaultOnAiService} from './ai/vault-service.mjs';
 import {createConnectionManager} from './connection/manager.mjs';
 import {createProjectScanner} from './vulnerabilities/project-scan.mjs';
 import {readLocalPcMetrics} from './pc-metrics.mjs';
+import {readLocalPcSecurity} from './pc-security.mjs';
 import {buildLocalLearnerSupportGuide,isLearnerSupportProblemKind,readLocalLearnerSupportObservation} from './learner-support/service.mjs';
 import {nativeOwn,nativePublicError} from './connection/native-login.mjs';
 import {createNativeHostContext,captureNativeHostConfiguration,readNativeHostConfiguration,openNativeHostOperation,readNativeHostOperation,assertNativeHostOperation,createNativeOperationVault,closeNativeHostOperation} from './connection/native-context.mjs';
@@ -681,6 +682,11 @@ export function createOnServer(serverOptions={}) {
         assertAlive();
         send(200,{ok:true,data:guide});return;
         }finally{closeNativeHostOperation(nativeOperation);}
+      }
+      if(req.method==='GET'&&url.pathname==='/api/pc-security'){
+        // Localhost only, read-only. This does not inspect, change or claim SDP server state.
+        const data=await bounded(signal=>readLocalPcSecurity({signal}));
+        send(200,{ok:true,data});return;
       }
       if(req.method==='GET'&&url.pathname==='/api/pc-metrics'){
         // A separate local-only read-only path; never uses or alters the SDP engine.
